@@ -3,7 +3,7 @@ The Climbers
 
 # Members
 
-| Name | GitHub | LinkedIn |
+| Name | Title | GitHub | LinkedIn |
 |---|---|---|---|
 | Steven Rocca    |  Product Owner | [@stevenrocca3](https://github.com/stevenrocca3) | [Steven Rocca](https://www.linkedin.com/in/steven-rocca3/)     |
 | Denys Tsinyk    |   Scrum Master | [Github User Here](Github URL Here)              | [Denys Tsinyk](LinkedIn Link here)                             |
