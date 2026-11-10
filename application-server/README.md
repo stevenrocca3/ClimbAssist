@@ -4,7 +4,7 @@ The application server is the Python FastAPI backend. It accepts requests from t
 
 Status: skeleton only. The app starts and `GET /health` returns `{"status": "ok"}`. No other features yet.
 
-Developed with Python 3.9.6.
+Requires Python 3.11 or newer (the pinned SQLAlchemy version needs it).
 
 ## Run locally
 

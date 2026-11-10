@@ -18,8 +18,8 @@ Help PittRec Center climbers by analyzing pictures of the climbing wall courses 
 
 | Area | Technology | Current status |
 |---|---|---|
-| Web client | React and TypeScript | Planned; the `web-client/` directory is currently a placeholder |
-| Application server | Python 3.9.6, FastAPI, Uvicorn | Implemented skeleton with `GET /health` |
+| Web client | React, TypeScript, Vite | Implemented start page that calls `GET /health` |
+| Application server | Python, FastAPI, Uvicorn | Implemented skeleton with `GET /health` and a standalone PostgreSQL connection check (`check_db.py`) |
 | Image analysis | OpenCV and PyTorch | Planned; the `image-analysis/` directory is currently a placeholder |
 | Route solution engine | Python service/module | Planned; the `route-solution-engine/` directory is currently a placeholder |
 | Account management | PostgreSQL and authentication | Planned; the `account-management/` directory is currently a placeholder |
@@ -33,7 +33,7 @@ data stored in PostgreSQL.
 
 ```mermaid
 flowchart TB
-    client["Web Client<br/>React + TypeScript<br/><br/>Upload photo, select route,<br/>display solution"]
+    client["Web Client<br/>React + TypeScript + Vite<br/><br/>Current: start page and server status<br/>Planned: upload photo, select route,<br/>display solution"]
     server["Application Server<br/>Python + FastAPI<br/><br/>API, orchestration, validation<br/>Current: GET /health"]
     accounts["Account Management<br/><br/>Authentication, profiles,<br/>and preferences"]
     analysis["Image Analysis<br/>OpenCV + PyTorch<br/><br/>Detect and outline holds"]
@@ -43,7 +43,8 @@ flowchart TB
     client -->|"HTTP/JSON"| server
     server -->|"account data"| accounts
     server -->|"wall image"| analysis
-    analysis -->|"detected holds"| solver
+    analysis -->|"detected holds"| server
+    server -->|"detected holds"| solver
     accounts -.->|"persistent data"| database
     solver -->|"route solution"| server
     server -->|"solution"| client
@@ -51,65 +52,80 @@ flowchart TB
     classDef implemented fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
     classDef planned fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
     classDef data fill:#e2e8f0,stroke:#64748b,stroke-width:2px,color:#0f172a
-    class server implemented
-    class client,accounts,analysis,solver planned
+    class client,server implemented
+    class accounts,analysis,solver planned
     class database data
 ```
 
-The diagram describes the target architecture. Currently, only the application
-server skeleton and its health endpoint are implemented.
+![Sprint 3 subsystem decomposition](docs/subsystem-decomposition.png)
+
+![Deployment diagram](docs/depolyment-diagram.png)
+
+The diagram describes the target architecture.
 
 # Prerequisites
 
-The currently runnable component requires:
-
-- Python 3.9.6 or a compatible Python 3 installation
+- Python 3.11 or newer (required by the pinned SQLAlchemy version in [`requirements.txt`](application-server/requirements.txt))
 - `pip`
+- Node.js and npm (developed with Node.js v22.23.4 and npm 10.9.9)
 - `curl` (for the health check)
-
-Node.js, npm, PostgreSQL, OpenCV, and PyTorch will be required when their
-planned subsystems are implemented. They are not required to run the current
-health-check server.
+- PostgreSQL 16 (tested with 16.15 in the server README), needed only for the database connection check
 
 # How to Run
 
-## Start the application server
+## Application server
 
-From the repository root:
+Run these commands from the repository root.
 
 ```bash
 cd application-server
-python3.9 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-On systems where `python3.9` is not available, use `python3` if it points to
-Python 3.9 or another compatible Python 3 installation.
+On Windows PowerShell, use these commands from `application-server/` to create and activate the virtual environment. Then run the same `pip` and `uvicorn` commands.
 
-## Check that it works
-
-In a second terminal, run:
-
-```bash
-curl http://localhost:8000/health
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 ```
 
-The expected response is:
+In a second terminal, run `curl http://localhost:8000/health`. The expected response is `{"status":"ok"}`.
 
-```json
-{"status":"ok"}
-```
-
-The interactive API documentation is also available at
-<http://localhost:8000/docs> while the server is running.
+For setup details and the PostgreSQL connection check, see the [Application Server README](application-server/README.md).
 
 ## Web client
 
-The React/TypeScript client has not been implemented yet, so there is currently
-no client install or start command. Once it is added, it will use the
-`VITE_API_URL` value in `.env.example` to connect to the application server.
+Run these commands from the repository root in a separate terminal.
+
+```bash
+cd web-client
+npm install
+npm run dev
+```
+
+Open <http://localhost:5173> and look for the ClimbAssist heading.
+
+To check both components together, start the application server, then the web client, and open the same page. The page shows the server status (`ok` with a healthy server).
+
+For details on `VITE_API_URL` and other setup options, see the [Web Client README](web-client/README.md).
+
+# What Works / What Doesn't
+
+**Works**
+
+- The application server returns `{"status":"ok"}` from `GET /health`.
+- The web client start page displays the result of the health check.
+- The standalone `application-server/check_db.py` script checks a PostgreSQL connection using `DATABASE_URL`.
+
+**Doesn't work yet**
+
+- Image Analysis
+- Route Solution Engine
+- Account Management
+- Deployment beyond local machines
 
 # Build Plan
 We plan to build ClimbAssist as a web app with a React and TypeScript frontend, so climbers can use it from their phone’s browser without installing anything. The backend will be in Python using FastAPI, with OpenCV for image processing and PyTorch for the hold detection model, and PostgreSQL to store accounts and climber profiles. The thing we are least sure about is whether a pretrained model can find at least 75% of holds (NFR2) on real gym photos. If it can’t, we will have to label our own wall images and fine-tune the model, which could take a big part of Sprints 3 and 4.
@@ -117,8 +133,12 @@ We plan to build ClimbAssist as a web app with a React and TypeScript frontend, 
 # Repository Layout
 
 - [`application-server/`](application-server/) - FastAPI backend skeleton
-- [`web-client/`](web-client/) - planned React/TypeScript frontend
+- [`web-client/`](web-client/) - implemented React/TypeScript start page with Vite
 - [`image-analysis/`](image-analysis/) - planned hold-detection subsystem
 - [`route-solution-engine/`](route-solution-engine/) - planned route-solving subsystem
 - [`account-management/`](account-management/) - planned accounts and profiles subsystem
 - [`user-stories.md`](user-stories.md) - product requirements and acceptance criteria
+
+# GenAI Usage
+
+GenAI was used in code generation for this project.
