@@ -59,7 +59,7 @@ flowchart TB
 
 ![Sprint 3 subsystem decomposition](docs/subsystem-decomposition.png)
 
-![Deployment diagram](docs/depolyment-diagram.png)
+![Deployment diagram](docs/deployment-diagram.png)
 
 The diagram describes the target architecture.
 
