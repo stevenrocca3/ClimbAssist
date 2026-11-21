@@ -1,8 +1,8 @@
 # Web Client
 
-The web client is the React and TypeScript frontend climbers use in a phone browser. It sends wall photos and account actions to the application server and shows the recommended way to complete a route.
+The web client is the React and TypeScript frontend climbers use in a phone browser. It sends a wall photo to the application server and outlines the holds the server finds.
 
-Status: Vite + React + TypeScript start page. It shows the ClimbAssist name and the `GET /health` result.
+Status: upload, preview, and hold outlines are implemented. The detection endpoint is not on the server yet. If `POST /api/holds/detect` is missing or fails, the page shows the checked-in sample wall and says so. An empty `holds` array asks the climber to retake the photo.
 
 Developed with Node.js v22.23.4 and npm 10.9.9.
 

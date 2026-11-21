@@ -1,0 +1,14 @@
+{
+  "holds": [
+    { "id": "h1", "color": "yellow", "x": 0.4163, "y": 0.8282, "width": 0.0875, "height": 0.0636 },
+    { "id": "h2", "color": "yellow", "x": 0.2563, "y": 0.7082, "width": 0.0875, "height": 0.0636 },
+    { "id": "h3", "color": "yellow", "x": 0.5963, "y": 0.6282, "width": 0.0875, "height": 0.0636 },
+    { "id": "h4", "color": "yellow", "x": 0.3363, "y": 0.5082, "width": 0.0875, "height": 0.0636 },
+    { "id": "h5", "color": "yellow", "x": 0.5363, "y": 0.3682, "width": 0.0875, "height": 0.0636 },
+    { "id": "h6", "color": "yellow", "x": 0.4263, "y": 0.2082, "width": 0.0875, "height": 0.0636 },
+    { "id": "d1", "color": "blue", "x": 0.6825, "y": 0.7927, "width": 0.075, "height": 0.0545 },
+    { "id": "d2", "color": "orange", "x": 0.1825, "y": 0.5527, "width": 0.075, "height": 0.0545 },
+    { "id": "d3", "color": "blue", "x": 0.6625, "y": 0.2927, "width": 0.075, "height": 0.0545 },
+    { "id": "d4", "color": "orange", "x": 0.2025, "y": 0.3327, "width": 0.075, "height": 0.0545 }
+  ]
+}

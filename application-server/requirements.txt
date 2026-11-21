@@ -4,3 +4,5 @@ python-multipart==0.0.20
 Pillow==12.1.0
 numpy==2.4.1
 opencv-python-headless==4.13.0.92
+sqlalchemy==2.1.8
+psycopg[binary]==3.3.8
