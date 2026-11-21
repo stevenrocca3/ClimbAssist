@@ -16,3 +16,11 @@ npm run dev
 ```
 
 The dev server uses port 5173 by default. The page calls `GET /health` at `VITE_API_URL`, or `http://localhost:8000` when that variable is unset. If the request fails, the page shows "Server not reachable".
+
+## Hold detection demo
+
+Open `http://localhost:5173/#hold-detection-demo` while the FastAPI server is
+running on port 8000. This hash-routed demo is isolated from the permanent app
+screen and does not add a second upload flow to Jayson's confirmed-photo work.
+Choose a JPEG or PNG, verify colored outlines and labels appear, then choose the
+empty fixture and verify "No holds found. Retake the photo." appears.
