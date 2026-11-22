@@ -2,7 +2,7 @@
 
 The application server is the Python FastAPI backend. It accepts requests from the web client and coordinates image analysis, route solving, and account data stored in PostgreSQL.
 
-Status: skeleton only. The app starts and `GET /health` returns `{"status": "ok"}`. No other features yet.
+Status: includes `GET /health` and the `POST /api/holds/detect` hold-detection endpoint.
 
 Requires Python 3.11 or newer (the pinned SQLAlchemy version needs it).
 
@@ -19,6 +19,12 @@ uvicorn app.main:app --reload --port 8000
 
 Then check it: `curl http://localhost:8000/health`
 
+Detect holds in an uploaded JPEG or PNG:
+
+```
+curl -F "file=@../image-analysis/fixtures/representative-holds.png" \
+  http://localhost:8000/api/holds/detect
+```
 ## Database
 
 The server uses PostgreSQL 16 (tested with 16.15), run locally.

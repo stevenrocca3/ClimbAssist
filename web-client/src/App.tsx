@@ -31,13 +31,14 @@ async function loadSampleHolds(): Promise<Hold[]> {
 async function readError(response: Response): Promise<string> {
   try {
     const payload = (await response.json()) as unknown
-    if (
-      typeof payload === 'object' &&
-      payload !== null &&
-      'error' in payload &&
-      typeof payload.error === 'string'
-    ) {
-      return payload.error
+    if (typeof payload === 'object' && payload !== null) {
+      const body = payload as Record<string, unknown>
+      if (typeof body.detail === 'string') {
+        return Promise.resolve(body.detail)
+      }
+      if (typeof body.error === 'string') {
+        return Promise.resolve(body.error)
+      }
     }
   } catch {
     // The server did not return JSON.
@@ -110,7 +111,12 @@ function App() {
         method: 'POST',
         body,
       })
-      if (response.status === 400 || response.status === 413) {
+      if (
+        response.status === 400 ||
+        response.status === 413 ||
+        response.status === 415 ||
+        response.status === 422
+      ) {
         setError(await readError(response))
         return
       }
