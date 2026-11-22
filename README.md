@@ -18,9 +18,9 @@ Help PittRec Center climbers by analyzing pictures of the climbing wall courses 
 
 | Area | Technology | Current status |
 |---|---|---|
-| Web client | React, TypeScript, Vite | Implemented start page that calls `GET /health` |
-| Application server | Python, FastAPI, Uvicorn | Implemented skeleton with `GET /health` and a standalone PostgreSQL connection check (`check_db.py`) |
-| Image analysis | OpenCV and PyTorch | Planned; the `image-analysis/` directory is currently a placeholder |
+| Web client | React, TypeScript, Vite | Implemented photo upload, hold outlines, and hold selection |
+| Application server | Python, FastAPI, Uvicorn | Implements `GET /health`, `POST /api/holds/detect`, and a standalone PostgreSQL connection check (`check_db.py`) |
+| Image analysis | OpenCV, NumPy, Pillow | Basic color-based hold detection with known accuracy limitations |
 | Route solution engine | Python service/module | Planned; the `route-solution-engine/` directory is currently a placeholder |
 | Account management | PostgreSQL and authentication | Planned; the `account-management/` directory is currently a placeholder |
 
@@ -33,10 +33,10 @@ data stored in PostgreSQL.
 
 ```mermaid
 flowchart TB
-    client["Web Client<br/>React + TypeScript + Vite<br/><br/>Current: start page and server status<br/>Planned: upload photo, select route,<br/>display solution"]
-    server["Application Server<br/>Python + FastAPI<br/><br/>API, orchestration, validation<br/>Current: GET /health"]
+    client["Web Client<br/>React + TypeScript + Vite<br/><br/>Current: photo upload, hold outlines,<br/>and hold selection<br/>Planned: display solution"]
+    server["Application Server<br/>Python + FastAPI<br/><br/>API, orchestration, validation<br/>Current: GET /health and hold detection"]
     accounts["Account Management<br/><br/>Authentication, profiles,<br/>and preferences"]
-    analysis["Image Analysis<br/>OpenCV + PyTorch<br/><br/>Detect and outline holds"]
+    analysis["Image Analysis<br/>OpenCV + Pillow<br/><br/>Current: color-based hold detection"]
     solver["Route Solution Engine<br/><br/>Hold graph, reachability,<br/>and movement sequence"]
     database[("PostgreSQL<br/><br/>Accounts, profiles,<br/>and feedback")]
 
@@ -52,8 +52,8 @@ flowchart TB
     classDef implemented fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
     classDef planned fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
     classDef data fill:#e2e8f0,stroke:#64748b,stroke-width:2px,color:#0f172a
-    class client,server implemented
-    class accounts,analysis,solver planned
+    class client,server,analysis implemented
+    class accounts,solver planned
     class database data
 ```
 
@@ -108,15 +108,25 @@ npm run dev
 
 Open <http://localhost:5173> and look for the ClimbAssist heading.
 
-To check both components together, start the application server, then the web client, and open the same page. The page shows the server status (`ok` with a healthy server).
+To check both components together, start the application server, then the web client, and open the same page. Upload a JPEG or PNG and press **Detect holds** to see outlined holds returned by the server.
 
 For details on `VITE_API_URL` and other setup options, see the [Web Client README](web-client/README.md).
+
+## Hold selection
+
+1. Open <http://localhost:5173> and upload a photo, then press **Detect holds**. To try the interface without the server, press **Use sample wall**.
+2. Click or tap a hold to select all detected holds of that color. Selected holds have a check mark and a stronger outline.
+3. Click individual holds to add or remove them. The selected-hold count updates below the photo. Keyboard users can Tab to a hold and press Enter or Space.
+4. Press **Clear selection** to choose a different color group. Replacing the photo, detecting again, loading the sample wall, or starting over resets the selection.
+
+This implements the hold-selection part of issue #5 (`Refs #5`). Start/finish markers and route generation remain planned.
 
 ## Automated checks
 
 Pull requests targeting `main` run the [CI workflow](.github/workflows/ci.yml).
-It compiles the FastAPI server, tests the `GET /health` response, and builds the
-React client. A next check could exercise photo upload and hold detection together.
+It compiles the FastAPI server, tests health and hold detection, runs client tests
+for hold validation, selection, and request cancellation, and builds the React client.
+A next check could exercise the complete upload and selection flow in a browser.
 
 From `application-server/`, with the server dependencies already installed and
 the virtual environment active:
@@ -126,19 +136,20 @@ python -m pip install -r requirements-test.txt
 python -m unittest discover -s tests -v
 ```
 
-From `web-client/`, run `npm ci` and `npm run build` to check the client build.
+From `web-client/`, run `npm ci`, `npm test`, and `npm run build` to check the client.
 
 # What Works / What Doesn't
 
 **Works**
 
 - The application server returns `{"status":"ok"}` from `GET /health`.
-- The web client start page displays the result of the health check.
+- The web client uploads photos, outlines detected holds, and lets the user select holds by color and adjust the selection manually.
+- Hold detection returns a clear empty result when it finds no holds. Detection accuracy limitations are documented in the [evaluation](docs/hold-detection-evaluation.md).
 - The standalone `application-server/check_db.py` script checks a PostgreSQL connection using `DATABASE_URL`.
 
 **Doesn't work yet**
 
-- Image Analysis
+- Start and finish markers
 - Route Solution Engine
 - Account Management
 - Deployment beyond local machines
@@ -149,8 +160,8 @@ We plan to build ClimbAssist as a web app with a React and TypeScript frontend, 
 # Repository Layout
 
 - [`application-server/`](application-server/) - FastAPI backend skeleton
-- [`web-client/`](web-client/) - implemented React/TypeScript start page with Vite
-- [`image-analysis/`](image-analysis/) - planned hold-detection subsystem
+- [`web-client/`](web-client/) - React/TypeScript photo upload, hold outlines, and selection with Vite
+- [`image-analysis/`](image-analysis/) - basic OpenCV hold-detection subsystem
 - [`route-solution-engine/`](route-solution-engine/) - planned route-solving subsystem
 - [`account-management/`](account-management/) - planned accounts and profiles subsystem
 - [`user-stories.md`](user-stories.md) - product requirements and acceptance criteria

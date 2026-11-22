@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { parseHolds } from './holds.ts'
+import { parseHolds, toggleHoldSelection } from './holds.ts'
 
 const inside = {
   id: 'h1',
@@ -48,4 +48,43 @@ test('reads the checked-in sample wall', () => {
   const holds = parseHolds(body)
   assert.ok(holds)
   assert.equal(holds.length, 10)
+})
+
+const routeHolds = [
+  { ...inside, id: 'yellow-1' },
+  { ...inside, id: 'yellow-2' },
+  { ...inside, id: 'blue-1', color: 'blue' },
+  { ...inside, id: 'blue-2', color: 'blue' },
+]
+
+test('the first click selects all holds of the clicked color', () => {
+  assert.deepEqual(toggleHoldSelection(routeHolds, null, 'yellow-1'), ['yellow-1', 'yellow-2'])
+  assert.deepEqual(toggleHoldSelection(routeHolds, null, 'blue-1'), ['blue-1', 'blue-2'])
+})
+
+test('clicking a selected hold removes only that hold', () => {
+  const selected = ['yellow-1', 'yellow-2']
+  assert.deepEqual(toggleHoldSelection(routeHolds, selected, 'yellow-1'), ['yellow-2'])
+  assert.deepEqual(selected, ['yellow-1', 'yellow-2'])
+})
+
+test('manual corrections can add just one hold of another color', () => {
+  const selected = ['yellow-1', 'yellow-2']
+  assert.deepEqual(toggleHoldSelection(routeHolds, selected, 'blue-1'), [
+    'yellow-1', 'yellow-2', 'blue-1',
+  ])
+  assert.deepEqual(selected, ['yellow-1', 'yellow-2'])
+})
+
+test('removing every hold keeps individual selection active', () => {
+  const selected = toggleHoldSelection(routeHolds, ['yellow-1'], 'yellow-1')
+  assert.deepEqual(selected, [])
+  assert.deepEqual(toggleHoldSelection(routeHolds, selected, 'blue-1'), ['blue-1'])
+})
+
+test('unknown IDs and empty detection results leave the selection unchanged', () => {
+  const selected = ['yellow-1']
+  assert.equal(toggleHoldSelection(routeHolds, selected, 'missing'), selected)
+  assert.equal(toggleHoldSelection(routeHolds, null, 'missing'), null)
+  assert.equal(toggleHoldSelection([], null, 'missing'), null)
 })

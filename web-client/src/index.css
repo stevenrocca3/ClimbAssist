@@ -115,9 +115,24 @@ button:disabled {
 .hold {
   position: absolute;
   box-sizing: border-box;
+  min-height: 0;
+  padding: 0;
   border: 2px solid #1c1917;
   border-radius: 4px;
-  pointer-events: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.hold[aria-pressed='true'] {
+  border-width: 3px;
+  background: rgb(63 98 18 / 22%);
+  box-shadow: 0 0 0 2px #1c1917;
+}
+
+.hold:focus-visible {
+  outline: 3px solid #1c1917;
+  outline-offset: 3px;
+  z-index: 1;
 }
 
 .hold-id {
