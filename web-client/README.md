@@ -12,10 +12,13 @@ From the `web-client/` folder:
 
 ```
 npm install
+npm test
 npm run dev
 ```
 
 The dev server uses port 5173 by default. The page calls `GET /health` at `VITE_API_URL`, or `http://localhost:8000` when that variable is unset. If the request fails, the page shows "Server not reachable".
+=======
+`npm test` checks that a hold box stays inside the photo. `x`, `y`, `width`, and `height` are fractions from 0 to 1, and `x + width` and `y + height` must not pass 1.
 
 ## Hold detection demo
 
