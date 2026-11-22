@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { HoldOverlay, type Hold } from './HoldOverlay'
+import { useEffect, useState, type ChangeEvent } from 'react'
 
 const DEFAULT_API_URL = 'http://localhost:8000'
 const SAMPLE_IMAGE = '/fixtures/sample-wall.png'
@@ -70,13 +69,14 @@ async function loadSampleHolds(): Promise<Hold[]> {
 async function readError(response: Response): Promise<string> {
   try {
     const payload = (await response.json()) as unknown
-    if (
-      typeof payload === 'object' &&
-      payload !== null &&
-      'error' in payload &&
-      typeof payload.error === 'string'
-    ) {
-      return payload.error
+    if (typeof payload === 'object' && payload !== null) {
+      const body = payload as Record<string, unknown>
+      if (typeof body.detail === 'string') {
+        return Promise.resolve(body.detail)
+      }
+      if (typeof body.error === 'string') {
+        return Promise.resolve(body.error)
+      }
     }
   } catch {
     // The server did not return JSON.
@@ -85,11 +85,13 @@ async function readError(response: Response): Promise<string> {
 }
 
 function App() {
-  const [serverStatus, setServerStatus] = useState('Checking server...')
-  const [demoImageUrl, setDemoImageUrl] = useState('')
-  const [holds, setHolds] = useState<Hold[]>([])
-  const [demoMessage, setDemoMessage] = useState('')
-  const isDemo = window.location.hash === '#hold-detection-demo'
+  const [file, setFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
+  const [holds, setHolds] = useState<Hold[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!previewUrl) {
@@ -147,7 +149,12 @@ function App() {
         method: 'POST',
         body,
       })
-      if (response.status === 400 || response.status === 413) {
+      if (
+        response.status === 400 ||
+        response.status === 413 ||
+        response.status === 415 ||
+        response.status === 422
+      ) {
         setError(await readError(response))
         return
       }
@@ -210,43 +217,71 @@ function App() {
   return (
     <main>
       <h1>ClimbAssist</h1>
-      <p>{serverStatus}</p>
-      {isDemo && (
-        <section className="hold-demo" aria-label="Hold detection demo">
-          <label htmlFor="hold-image">Choose an image for the Issue #4 demo</label>
+      <p className="intro">
+        Upload a photo of the wall. Detected holds are outlined so you can see what the photo contains.
+      </p>
+
+      <section className="card">
+        <label className="file-label" htmlFor="wall-photo">
+          Wall photo
           <input
-            id="hold-image"
+            id="wall-photo"
             type="file"
             accept="image/jpeg,image/png"
-            onChange={async (event) => {
-              const file = event.target.files?.[0]
-              if (!file) return
-              setDemoMessage('Detecting holds...')
-              if (demoImageUrl) URL.revokeObjectURL(demoImageUrl)
-              const imageUrl = URL.createObjectURL(file)
-              setDemoImageUrl(imageUrl)
-
-              const form = new FormData()
-              form.append('file', file)
-              const response = await fetch(`${apiBaseUrl()}/api/holds/detect`, {
-                method: 'POST',
-                body: form,
-              })
-              const body = await response.json() as { holds?: Hold[]; detail?: string }
-              if (!response.ok) {
-                setHolds([])
-                setDemoMessage(body.detail || `Detection failed (${response.status})`)
-                return
-              }
-              const detected = body.holds || []
-              setHolds(detected)
-              setDemoMessage(detected.length ? `${detected.length} hold(s) detected` : 'No holds found. Retake the photo.')
-            }}
+            capture="environment"
+            onChange={onFile}
           />
-          {demoImageUrl && <HoldOverlay imageUrl={demoImageUrl} holds={holds} alt="Uploaded climbing wall" />}
-          {demoMessage && <p role="status">{demoMessage}</p>}
-        </section>
-      )}
+        </label>
+        <p className="hint">JPEG or PNG, up to 10 MB. You can replace the photo before detecting holds.</p>
+
+        {error ? <p className="error">{error}</p> : null}
+
+        <div className="actions">
+          <button type="button" onClick={onAnalyze} disabled={busy || !file}>
+            {busy ? 'Working...' : 'Detect holds'}
+          </button>
+          <button type="button" className="secondary" onClick={onUseSample} disabled={busy}>
+            Use sample wall
+          </button>
+        </div>
+
+        {previewUrl && !holds ? (
+          <img className="preview" src={previewUrl} alt="Selected wall" />
+        ) : null}
+
+        {holds && imageSrc ? (
+          <div className="result">
+            {notice ? <p className="notice">{notice}</p> : null}
+            <div className="stage">
+              <img src={imageSrc} alt="Climbing wall with outlined holds" />
+              {holds.map((hold) => (
+                <span
+                  key={hold.id}
+                  className="hold"
+                  style={{
+                    left: `${hold.x * 100}%`,
+                    top: `${hold.y * 100}%`,
+                    width: `${hold.width * 100}%`,
+                    height: `${hold.height * 100}%`,
+                    borderColor: hold.color,
+                  }}
+                  title={`${hold.id} ${hold.color}`}
+                >
+                  <span className="hold-id">{hold.id}</span>
+                </span>
+              ))}
+            </div>
+            <p className="summary">
+              {holds.length === 0 ? 'No holds outlined.' : `${holds.length} holds outlined.`}
+            </p>
+            <div className="actions">
+              <button type="button" className="secondary" onClick={onStartOver}>
+                Start over
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </section>
     </main>
   )
 }
