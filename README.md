@@ -67,9 +67,11 @@ The diagram describes the target architecture.
 
 - Python 3.11 or newer (required by the pinned SQLAlchemy version in [`requirements.txt`](application-server/requirements.txt))
 - `pip`
-- Node.js and npm (developed with Node.js v22.23.4 and npm 10.9.9)
-- `curl` (for the health check)
+- Node.js and npm (developed with Node.js v22.23.4 and npm 10.9.9). The locked frontend tooling supports Node `^20.19.0 || >=22.12.0`.
+- `curl` (for the health and upload checks)
 - PostgreSQL 16 (tested with 16.15 in the server README), needed only for the database connection check
+
+Installing the server requirements also installs Pillow, NumPy, OpenCV, and the upload parser used by hold detection.
 
 # How to Run
 
@@ -103,14 +105,45 @@ Run these commands from the repository root in a separate terminal.
 ```bash
 cd web-client
 npm install
-npm run dev
+npm run dev -- --port 5173 --strictPort
 ```
 
 Open <http://localhost:5173> and look for the ClimbAssist heading.
 
+The API accepts browser requests from `http://localhost:5173` and `http://127.0.0.1:5173`. The command above keeps the client on port 5173 and reports an error if that port is occupied.
+
 To check both components together, start the application server, then the web client, and open the same page. Upload a JPEG or PNG and press **Detect holds** to see outlined holds returned by the server.
 
 For details on `VITE_API_URL` and other setup options, see the [Web Client README](web-client/README.md).
+
+## API address and environment variables
+
+The client uses `http://localhost:8000` by default. To use a different server address, set `VITE_API_URL` before starting the client from `web-client/`.
+
+```bash
+VITE_API_URL=http://localhost:8000 npm run dev -- --port 5173 --strictPort
+```
+
+In Windows PowerShell, use the equivalent commands.
+
+```powershell
+$env:VITE_API_URL = "http://localhost:8000"
+npm run dev -- --port 5173 --strictPort
+```
+
+Restart the client after changing its API address. `DATABASE_URL` is required only when running `check_db.py`. Set it in the shell using the [database instructions](application-server/README.md#database).
+
+## Check live detection
+
+With the server running, run this command from the repository root to upload the included test image.
+
+```bash
+curl -F "file=@image-analysis/fixtures/representative-holds.png" http://localhost:8000/api/holds/detect
+```
+
+The response contains a `holds` array with each candidate's ID, color, and normalized bounding box. An image with no detected holds returns `{"holds":[]}`. In Windows PowerShell, use `curl.exe` for this upload command.
+
+Press Ctrl+C in each terminal to stop the client and server when finished testing.
 
 ## Hold selection
 
@@ -142,10 +175,18 @@ From `web-client/`, run `npm ci`, `npm test`, and `npm run build` to check the c
 
 **Works**
 
-- The application server returns `{"status":"ok"}` from `GET /health`.
-- The web client uploads photos, outlines detected holds, and lets the user select holds by color and adjust the selection manually.
-- Hold detection returns a clear empty result when it finds no holds. Detection accuracy limitations are documented in the [evaluation](docs/hold-detection-evaluation.md).
-- The standalone `application-server/check_db.py` script checks a PostgreSQL connection using `DATABASE_URL`.
+| Feature | What it does | How to use it |
+|---|---|---|
+| Photo upload and preview | Accepts JPEG/PNG photos up to 10 MiB, checks the file type and size, and displays a preview. | Choose a file using **Wall photo**. Choose another file to replace it before detection. |
+| Hold detection and outlines | Returns candidate holds and draws labeled boxes on the uploaded photo. An empty result asks the climber to retake the photo. | Start the server and client, choose a photo, and press **Detect holds**. |
+| Hold selection | Selects a color group, supports individual corrections and keyboard input, and displays the selected-hold count. | Click a hold to choose its color group, then click holds to add or remove them. See [Hold selection](#hold-selection). |
+| Sample wall | Loads a checked-in demo image and predefined hold boxes so selection can be tried with the client alone. | Press **Use sample wall**. A notice identifies the sample data. Some detection failures also display this labeled sample wall. |
+| Outdated-request cancellation | Prevents an old detection or sample response from overwriting the current photo, result, messages, or loading state. | Replace the photo while detection is pending. **Start over** clears the photo and results and cancels pending work. |
+| Server health check | Reports whether the API responds with `{"status":"ok"}`. | With the server running, use `curl http://localhost:8000/health`. |
+| PostgreSQL connection check | Runs a standalone database connectivity check and prints the result. | Follow the [database setup](application-server/README.md#database), set `DATABASE_URL`, and run `python check_db.py` from `application-server/`. |
+| Automated checks | Runs server and client tests and builds the client in CI. | Follow [Automated checks](#automated-checks) locally, or inspect the checks on a PR targeting `main`. |
+
+The current detector can miss holds or group large image regions together. Its accuracy limitations and outstanding detection target are documented in the [evaluation](docs/hold-detection-evaluation.md).
 
 **Doesn't work yet**
 
@@ -159,7 +200,7 @@ We plan to build ClimbAssist as a web app with a React and TypeScript frontend, 
 
 # Repository Layout
 
-- [`application-server/`](application-server/) - FastAPI backend skeleton
+- [`application-server/`](application-server/) - FastAPI health and hold-detection endpoints, plus the database connection check
 - [`web-client/`](web-client/) - React/TypeScript photo upload, hold outlines, and selection with Vite
 - [`image-analysis/`](image-analysis/) - basic OpenCV hold-detection subsystem
 - [`route-solution-engine/`](route-solution-engine/) - planned route-solving subsystem
