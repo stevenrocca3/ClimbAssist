@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { parseHolds, type Hold } from './holds'
+import { createLatestOperation } from './latestOperation'
 
 const DEFAULT_API_URL = 'http://localhost:8000'
 const SAMPLE_IMAGE = '/fixtures/sample-wall.png'
@@ -16,8 +17,8 @@ function isJpegOrPng(file: File): boolean {
   return file.type === 'image/jpeg' || file.type === 'image/png'
 }
 
-async function loadSampleHolds(): Promise<Hold[]> {
-  const response = await fetch(SAMPLE_HOLDS)
+async function loadSampleHolds(signal: AbortSignal): Promise<Hold[]> {
+  const response = await fetch(SAMPLE_HOLDS, { signal })
   if (!response.ok) {
     throw new Error('Sample holds are missing')
   }
@@ -54,6 +55,17 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Only the operation started most recently may change what the page shows.
+  const [operations] = useState(createLatestOperation)
+
+  useEffect(
+    () => () => {
+      operations.cancel()
+      // Also covers React StrictMode's simulated unmount in development, where the state survives.
+      setBusy(false)
+    },
+    [operations],
+  )
 
   useEffect(() => {
     if (!previewUrl) {
@@ -83,14 +95,17 @@ function App() {
       event.target.value = ''
       return
     }
+    operations.cancel()
+    setBusy(false)
     setError(null)
     setFile(selected)
     setPreviewUrl(URL.createObjectURL(selected))
     resetResult()
   }
 
-  async function showSample(message: string) {
-    const sample = await loadSampleHolds()
+  async function showSample(message: string, signal: AbortSignal) {
+    const sample = await loadSampleHolds(signal)
+    signal.throwIfAborted()
     setHolds(sample)
     setImageSrc(SAMPLE_IMAGE)
     setNotice(message)
@@ -101,6 +116,7 @@ function App() {
       setError('Choose a JPEG or PNG first.')
       return
     }
+    const signal = operations.start()
     setBusy(true)
     setError(null)
     setNotice(null)
@@ -110,6 +126,7 @@ function App() {
       const response = await fetch(`${apiBaseUrl()}/api/holds/detect`, {
         method: 'POST',
         body,
+        signal,
       })
       if (
         response.status === 400 ||
@@ -117,19 +134,24 @@ function App() {
         response.status === 415 ||
         response.status === 422
       ) {
-        setError(await readError(response))
+        const message = await readError(response)
+        signal.throwIfAborted()
+        setError(message)
         return
       }
       if (!response.ok) {
         await showSample(
           'Sample holds. The detection service is not available yet, so this is the demo wall rather than your photo.',
+          signal,
         )
         return
       }
       const detected = parseHolds(await response.json())
+      signal.throwIfAborted()
       if (!detected) {
         await showSample(
           'Sample holds. The server response was not a hold list, so this is the demo wall rather than your photo.',
+          signal,
         )
         return
       }
@@ -141,31 +163,47 @@ function App() {
           : null,
       )
     } catch {
+      // An outdated request ends in an abort; ignore it instead of showing sample data or an error.
+      if (signal.aborted) {
+        return
+      }
       try {
         await showSample(
           'Sample holds. The server could not be reached, so this is the demo wall rather than your photo.',
+          signal,
         )
       } catch {
-        setError('The sample holds could not be loaded.')
+        if (!signal.aborted) {
+          setError('The sample holds could not be loaded.')
+        }
       }
     } finally {
-      setBusy(false)
+      if (!signal.aborted) {
+        setBusy(false)
+      }
     }
   }
 
   async function onUseSample() {
+    const signal = operations.start()
     setBusy(true)
     setError(null)
     try {
-      await showSample('Sample holds. These boxes are demo data, not detected from a photo.')
+      await showSample('Sample holds. These boxes are demo data, not detected from a photo.', signal)
     } catch {
-      setError('The sample holds could not be loaded.')
+      if (!signal.aborted) {
+        setError('The sample holds could not be loaded.')
+      }
     } finally {
-      setBusy(false)
+      if (!signal.aborted) {
+        setBusy(false)
+      }
     }
   }
 
   function onStartOver() {
+    operations.cancel()
+    setBusy(false)
     setFile(null)
     setPreviewUrl(null)
     setError(null)
