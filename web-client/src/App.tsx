@@ -1,18 +1,10 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
+import { parseHolds, type Hold } from './holds'
 
 const DEFAULT_API_URL = 'http://localhost:8000'
 const SAMPLE_IMAGE = '/fixtures/sample-wall.png'
 const SAMPLE_HOLDS = '/fixtures/sample-holds.json'
 const MAX_BYTES = 10 * 1024 * 1024
-
-type Hold = {
-  id: string
-  color: string
-  x: number
-  y: number
-  width: number
-  height: number
-}
 
 function apiBaseUrl(): string {
   const configured = import.meta.env.VITE_API_URL?.trim()
@@ -22,36 +14,6 @@ function apiBaseUrl(): string {
 
 function isJpegOrPng(file: File): boolean {
   return file.type === 'image/jpeg' || file.type === 'image/png'
-}
-
-function isUnit(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value)
-}
-
-function isHold(value: unknown): value is Hold {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-  const hold = value as Record<string, unknown>
-  return (
-    typeof hold.id === 'string' &&
-    typeof hold.color === 'string' &&
-    isUnit(hold.x) &&
-    isUnit(hold.y) &&
-    isUnit(hold.width) &&
-    isUnit(hold.height)
-  )
-}
-
-function parseHolds(value: unknown): Hold[] | null {
-  if (typeof value !== 'object' || value === null) {
-    return null
-  }
-  const body = value as Record<string, unknown>
-  if (!Array.isArray(body.holds) || !body.holds.every(isHold)) {
-    return null
-  }
-  return body.holds
 }
 
 async function loadSampleHolds(): Promise<Hold[]> {

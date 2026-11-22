@@ -12,8 +12,11 @@ From the `web-client/` folder:
 
 ```
 npm install
+npm test
 npm run dev
 ```
+
+`npm test` checks that a hold box stays inside the photo. `x`, `y`, `width`, and `height` are fractions from 0 to 1, and `x + width` and `y + height` must not pass 1.
 
 The dev server uses port 5173 by default. Open http://localhost:5173.
 

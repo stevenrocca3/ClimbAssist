@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  push:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -28,7 +29,7 @@ jobs:
         run: python -m unittest discover -s tests -v
 
   web-client:
-    name: Web client build
+    name: Web client test and build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,5 +41,7 @@ jobs:
           node-version: "22"
       - name: Install locked dependencies
         run: npm ci
+      - name: Run hold parser tests
+        run: npm test
       - name: Build web client
         run: npm run build
