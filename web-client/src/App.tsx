@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
-import { parseHolds, type Hold } from './holds'
+import { parseHolds, toggleHoldSelection, type Hold } from './holds'
 import { createLatestOperation } from './latestOperation'
 
 const DEFAULT_API_URL = 'http://localhost:8000'
@@ -52,6 +52,7 @@ function App() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [holds, setHolds] = useState<Hold[] | null>(null)
+  const [selectedHoldIds, setSelectedHoldIds] = useState<string[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -76,6 +77,7 @@ function App() {
 
   function resetResult() {
     setHolds(null)
+    setSelectedHoldIds(null)
     setImageSrc(null)
     setNotice(null)
   }
@@ -117,6 +119,7 @@ function App() {
       return
     }
     const signal = operations.start()
+    setSelectedHoldIds(null)
     setBusy(true)
     setError(null)
     setNotice(null)
@@ -186,6 +189,7 @@ function App() {
 
   async function onUseSample() {
     const signal = operations.start()
+    setSelectedHoldIds(null)
     setBusy(true)
     setError(null)
     try {
@@ -218,7 +222,7 @@ function App() {
     <main>
       <h1>ClimbAssist</h1>
       <p className="intro">
-        Upload a photo of the wall. Detected holds are outlined so you can see what the photo contains.
+        Upload a photo of the wall, detect the holds, and select the holds for your route.
       </p>
 
       <section className="card">
@@ -252,12 +256,27 @@ function App() {
         {holds && imageSrc ? (
           <div className="result">
             {notice ? <p className="notice">{notice}</p> : null}
+            {holds.length > 0 ? (
+              <p className="hint" id="hold-selection-help">
+                {selectedHoldIds === null
+                  ? 'Choose a hold to select its color group.'
+                  : 'Tap holds to add or remove them. Clear selection to choose another color group.'}
+              </p>
+            ) : null}
             <div className="stage">
               <img src={imageSrc} alt="Climbing wall with outlined holds" />
               {holds.map((hold) => (
-                <span
+                <button
+                  type="button"
                   key={hold.id}
                   className="hold"
+                  aria-label={`Hold ${hold.id}, ${hold.color}`}
+                  aria-pressed={selectedHoldIds?.includes(hold.id) ?? false}
+                  aria-describedby="hold-selection-help"
+                  disabled={busy}
+                  onClick={() => {
+                    setSelectedHoldIds((selection) => toggleHoldSelection(holds, selection, hold.id))
+                  }}
                   style={{
                     left: `${hold.x * 100}%`,
                     top: `${hold.y * 100}%`,
@@ -267,14 +286,28 @@ function App() {
                   }}
                   title={`${hold.id} ${hold.color}`}
                 >
-                  <span className="hold-id">{hold.id}</span>
-                </span>
+                  <span className="hold-id" aria-hidden="true">
+                    {selectedHoldIds?.includes(hold.id) ? '✓ ' : ''}{hold.id}
+                  </span>
+                </button>
               ))}
             </div>
-            <p className="summary">
-              {holds.length === 0 ? 'No holds outlined.' : `${holds.length} holds outlined.`}
+            <p className="summary" role="status">
+              {holds.length === 0
+                ? 'No holds outlined.'
+                : `${selectedHoldIds?.length ?? 0} of ${holds.length} holds selected.`}
             </p>
             <div className="actions">
+              {holds.length > 0 ? (
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setSelectedHoldIds(null)}
+                  disabled={busy || selectedHoldIds === null}
+                >
+                  Clear selection
+                </button>
+              ) : null}
               <button type="button" className="secondary" onClick={onStartOver}>
                 Start over
               </button>

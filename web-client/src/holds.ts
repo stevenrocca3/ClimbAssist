@@ -7,6 +7,26 @@ export type Hold = {
   height: number
 }
 
+// A null selection means the next click chooses a color group. An empty array
+// means the user removed every hold and can keep adjusting individual holds.
+export function toggleHoldSelection(
+  holds: Hold[],
+  selectedIds: string[] | null,
+  holdId: string,
+): string[] | null {
+  const clickedHold = holds.find((hold) => hold.id === holdId)
+  if (!clickedHold) {
+    return selectedIds
+  }
+  if (selectedIds === null) {
+    return holds.filter((hold) => hold.color === clickedHold.color).map((hold) => hold.id)
+  }
+  if (selectedIds.includes(holdId)) {
+    return selectedIds.filter((id) => id !== holdId)
+  }
+  return [...selectedIds, holdId]
+}
+
 function isFraction(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
 }
